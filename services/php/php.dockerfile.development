@@ -1,0 +1,48 @@
+FROM php:7.4.10-fpm
+
+ARG PHPGROUP
+ARG PHPUSER
+
+ENV PHPGROUP=${PHPGROUP}
+ENV PHPUSER=${PHPUSER}
+
+RUN adduser -g ${PHPGROUP} -s /bin/sh -D ${PHPUSER}; exit 0
+
+RUN mkdir -p /var/www
+
+WORKDIR /var/www
+
+RUN sed -i "s/user = www-data/user = ${PHPUSER}/g" /usr/local/etc/php-fpm.d/www.conf
+RUN sed -i "s/group = www-data/group = ${PHPGROUP}/g" /usr/local/etc/php-fpm.d/www.conf
+
+RUN apt-get update -y
+RUN apt-get install -y libmcrypt-dev libzip-dev zlib1g-dev libicu-dev libonig-dev openssl unzip g++ sendmail libpng-dev
+
+RUN docker-php-ext-install zip
+
+RUN docker-php-ext-install pdo
+
+RUN docker-php-ext-install pdo_mysql
+
+RUN pecl install mcrypt-1.0.3
+RUN docker-php-ext-enable mcrypt
+
+RUN docker-php-ext-install mbstring
+
+RUN docker-php-ext-install mysqli
+
+RUN docker-php-ext-install bcmath
+
+RUN docker-php-ext-configure intl
+RUN docker-php-ext-install intl
+
+RUN docker-php-ext-install gd
+
+RUN docker-php-ext-install exif
+
+RUN mkdir -p /usr/src/php/ext/redis \
+    && curl -L https://github.com/phpredis/phpredis/archive/5.3.4.tar.gz | tar xvz -C /usr/src/php/ext/redis --strip 1 \
+    && echo 'redis' >> /usr/src/php-available-exts \
+    && docker-php-ext-install redis
+
+CMD ["php-fpm", "-y", "/usr/local/etc/php-fpm.conf", "-R"]
